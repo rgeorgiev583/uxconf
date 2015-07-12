@@ -196,8 +196,10 @@ sub aug_create
     my $path = shift;
     my $xpath = fspath2xpath($path);
     return -EEXIST if scalar $aug->match($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") or not defined $aug->get($xpath);
-    return $aug->set($xpath, '');
+    my $success = $aug->set($xpath, '');
+    return -EPERM if $aug->error eq 'pathx';
+    return -ENOSPC if $aug->error eq 'nomem';
+    return $success ? 0 : 1;
 }
 
 $aug = Config::Augeas->new(root => shift @ARGV);
