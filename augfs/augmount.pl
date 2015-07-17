@@ -283,5 +283,3 @@ Fuse::main
     write => \&aug_write,
     create => \&aug_create,
 );
-
-$ino;
