@@ -7,13 +7,16 @@ use v5.012;
 
 use Config::Augeas;
 use Fuse;
-use File::Basename;
+use Parse::Path;
 use POSIX qw(EEXIST ENOENT EISDIR ENOTDIR ENOTEMPTY EINVAL EPERM ENOSPC EIO EFBIG);
 
 my $RETAIN_BRACKETS;
 
 my $aug;
 my @groups;
+
+my $last_inode = 0;
+my %cache;
 
 sub xpath2fspath
 {
@@ -61,6 +64,72 @@ sub fspath2xpath
 
     return $path;
 }
+
+sub exists_xpath
+{
+    my $xpath = shift;
+    return $xpath or scalar $aug->match($xpath);
+}
+
+sub isdir_xpath
+{
+    my $xpath = shift;
+    return scalar $aug->match("$xpath/*") or not defined $aug->get($xpath);
+}
+
+sub validate_xpath
+{
+    my $xpath = shift;
+    return -ENOENT unless exists_xpath($xpath);
+    my $hpath = Parse::Path->new(path => $xpath, style => 'File::Unix', auto_cleanup => 1);
+
+    while ($hpath->depth)
+    {
+        $hpath->pop;
+        return -ENOENT  unless exists_xpath($hpath->as_string);
+        return -ENOTDIR unless isdir_xpath($hpath->as_string);
+    }
+}
+
+sub fetch_subtree
+{
+    my $xpath = shift;
+
+    $cache{$xpath} =
+    {
+        inode => ++$last_inode,
+        value => $aug->get($xpath),
+    };
+
+    for my $node ($aug->match("$xpath/*"))
+    {
+        fetch_subtree("$xpath/$node");
+    }
+}
+
+sub aug_getattr
+{
+    my $path = shift;
+    #
+    # The list returned contains the following fields:
+    #   ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks),
+    # the meanings of which are as follows:
+    #
+    #  0 dev      device number of filesystem
+    #  1 ino      inode number
+    #  2 mode     file mode  (type and permissions)
+    #  3 nlink    number of (hard) links to the file
+    #  4 uid      numeric user ID of file's owner
+    #  5 gid      numeric group ID of file's owner
+    #  6 rdev     the device identifier (special files only)
+    #  7 size     total size of file, in bytes
+    #  8 atime    last access time in seconds since the epoch
+    #  9 mtime    last modify time in seconds since the epoch
+    # 10 ctime    inode change time (NOT creation time!) in seconds since the epoch
+    # 11 blksize  preferred block size for file system I/O
+    # 12 blocks   actual number of blocks allocated
+    #
+    return (40, );
 
 sub aug_getdir
 {
@@ -124,7 +193,7 @@ sub aug_rename
     return -ENOENT unless $xnewpath or scalar $aug->match($xnewpath);
     my $isnewdir = scalar $aug->match("$xnewpath/*") or not defined $aug->get($xnewpath);
     return -EISDIR if $isnewdir and not $isdir;
-    my $success = $aug->move($xpath, $isnewdir ? $xnewpath . '/' . basename($xpath) : $xnewpath);
+    my $success = $aug->move($xpath, $isnewdir ? $xnewpath . '/' . $xpath : $xnewpath);
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return -ENOENT if $aug->error eq 'nomatch';
@@ -214,3 +283,5 @@ Fuse::main
     write => \&aug_write,
     create => \&aug_create,
 );
+
+$ino;
