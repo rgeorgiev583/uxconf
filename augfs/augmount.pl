@@ -68,13 +68,13 @@ sub fspath2xpath
 sub exists_xpath
 {
     my $xpath = shift;
-    return $xpath or scalar $aug->match($xpath);
+    return $xpath || scalar $aug->match($xpath);
 }
 
 sub isdir_xpath
 {
     my $xpath = shift;
-    return scalar $aug->match("$xpath/*") or not defined $aug->get($xpath);
+    return scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
 }
 
 sub validate_xpath
@@ -136,10 +136,10 @@ sub aug_getdir
     my $dirname = shift;
     return -ENOTDIR if $dirname =~ /(?<=\/)[value]$/;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless $xdirname or scalar $aug->match($xdirname);
+    return -ENOENT unless $xdirname || scalar $aug->match($xdirname);
     my $value = $aug->get($xdirname);
     my @list = $aug->match("$xdirname/*");
-    return -ENOTDIR unless scalar @list or not defined $value;
+    return -ENOTDIR unless scalar @list || not defined $value;
     @list = map \&xpath2fspath @list;
     unshift @list, '[value]' if defined $value;
     return (@list, 0);
@@ -162,8 +162,8 @@ sub aug_unlink
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath or scalar $aug->match($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") or not defined $aug->get($xpath);
+    return -ENOENT unless $xpath || scalar $aug->match($xpath);
+    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
     my $success = $aug->srun("clear $xpath");
     return -EPERM if $aug->error eq 'pathx';
     return -EIO if $aug->error eq 'internal';
@@ -174,7 +174,7 @@ sub aug_rmdir
 {
     my $dirname = shift;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless $xdirname or scalar $aug->match($xdirname);
+    return -ENOENT unless $xdirname || scalar $aug->match($xdirname);
     return -ENOTEMPTY if scalar $aug->match("$xdirname/*");
     return -ENOTDIR if defined $aug->get($xdirname);
     my $success = $aug->remove($xdirname);
@@ -187,12 +187,12 @@ sub aug_rename
 {
     my ($path, $newpath) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath or scalar $aug->match($xpath);
-    my $isdir = scalar $aug->match("$xpath/*") or not defined $aug->get($xpath);
+    return -ENOENT unless $xpath || scalar $aug->match($xpath);
+    my $isdir = scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
     my $xnewpath = fspath2xpath($newpath);
-    return -ENOENT unless $xnewpath or scalar $aug->match($xnewpath);
-    my $isnewdir = scalar $aug->match("$xnewpath/*") or not defined $aug->get($xnewpath);
-    return -EISDIR if $isnewdir and not $isdir;
+    return -ENOENT unless $xnewpath || scalar $aug->match($xnewpath);
+    my $isnewdir = scalar $aug->match("$xnewpath/*") || not defined $aug->get($xnewpath);
+    return -EISDIR if $isnewdir && not $isdir;
     my $success = $aug->move($xpath, $isnewdir ? $xnewpath . '/' . $xpath : $xnewpath);
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
@@ -205,9 +205,9 @@ sub aug_truncate
 {
     my ($path, $size) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath or scalar $aug->match($xpath);
+    return -ENOENT unless $xpath || scalar $aug->match($xpath);
     my $value = $aug->get($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") or not defined $value;
+    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
     return -EINVAL if $size < 0;
     return -EFBIG if $size > $len;
@@ -222,12 +222,12 @@ sub aug_read
 {
     my ($path, $size, $offset) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath or scalar $aug->match($xpath);
+    return -ENOENT unless $xpath || scalar $aug->match($xpath);
     my $value = $aug->get($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") or not defined $value;
+    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
-    return -EINVAL if $offset < 0 or $size < 0 or $offset > $len;
-    return 0 if $offset == $len or $size == 0;
+    return -EINVAL if $offset < 0 || $size < 0 || $offset > $len;
+    return 0 if $offset == $len || $size == 0;
     return substr $value, $offset, $size;
 }
 
@@ -236,7 +236,7 @@ sub aug_write
     my ($path, $buffer, $offset) = @_;
     my $xpath = fspath2xpath($path);
     my $value = $aug->get($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") or not defined $value;
+    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
     return -EINVAL if $offset < 0;
     return -EFBIG if $offset > $len;
@@ -255,8 +255,8 @@ sub aug_flush
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath or scalar $aug->match($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") or not defined $aug->get($xpath);
+    return -ENOENT unless $xpath || scalar $aug->match($xpath);
+    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
     return $aug->save();
 }
 
