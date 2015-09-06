@@ -140,7 +140,7 @@ sub aug_getdir
     my $value = $aug->get($xdirname);
     my @list = $aug->match("$xdirname/*");
     return -ENOTDIR unless scalar @list || not defined $value;
-    @list = map \&xpath2fspath @list;
+    @list = map xpath2fspath @list;
     unshift @list, '[value]' if defined $value;
     return (@list, 0);
 }
