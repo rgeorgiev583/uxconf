@@ -105,7 +105,7 @@ sub rebuild_inode_subtree
 
     $cache{$xpath} = ++$last_inode;
 
-    rebuild_inode_subtree
+    rebuild_inode_subtree()
         foreach ($aug->match("$xpath/*"));
 }
 
