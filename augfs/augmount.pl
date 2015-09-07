@@ -144,7 +144,7 @@ sub aug_getdir
     my $dirname = shift;
     return -ENOTDIR if $dirname =~ /(?<=\/)[value]$/;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless $xdirname || scalar $aug->match($xdirname);
+    return -ENOENT unless exists_xpath($xdirname);
     my $value = $aug->get($xdirname);
     my @list = $aug->match("$xdirname/*");
     return -ENOTDIR unless scalar @list || not defined $value;
@@ -171,8 +171,8 @@ sub aug_unlink
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath || scalar $aug->match($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
+    return -ENOENT unless exists_xpath($xpath);
+    return -EISDIR if isdir_xpath($xpath);
     my $success = $aug->srun("clear $xpath");
     rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
@@ -184,7 +184,7 @@ sub aug_rmdir
 {
     my $dirname = shift;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless $xdirname || scalar $aug->match($xdirname);
+    return -ENOENT unless exists_xpath($xdirname);
     return -ENOTEMPTY if scalar $aug->match("$xdirname/*");
     return -ENOTDIR if defined $aug->get($xdirname);
     my $success = $aug->remove($xdirname);
@@ -198,11 +198,11 @@ sub aug_rename
 {
     my ($path, $newpath) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath || scalar $aug->match($xpath);
-    my $isdir = scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
+    return -ENOENT unless exists_xpath($xpath);
+    my $isdir = isdir_xpath($xpath);
     my $xnewpath = fspath2xpath($newpath);
-    return -ENOENT unless $xnewpath || scalar $aug->match($xnewpath);
-    my $isnewdir = scalar $aug->match("$xnewpath/*") || not defined $aug->get($xnewpath);
+    return -ENOENT unless exists_xpath($xnewpath);
+    my $isnewdir = isdir_xpath($xnewpath);
     return -EISDIR if $isnewdir && not $isdir;
     my $success = $aug->move($xpath, $isnewdir ? $xnewpath . '/' . $xpath : $xnewpath);
     rebuild_inode_cache();
@@ -217,7 +217,7 @@ sub aug_truncate
 {
     my ($path, $size) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath || scalar $aug->match($xpath);
+    return -ENOENT unless exists_xpath($xpath);
     my $value = $aug->get($xpath);
     return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
@@ -235,7 +235,7 @@ sub aug_read
 {
     my ($path, $size, $offset) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath || scalar $aug->match($xpath);
+    return -ENOENT unless exists_xpath($xpath);
     my $value = $aug->get($xpath);
     return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
@@ -269,8 +269,8 @@ sub aug_flush
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless $xpath || scalar $aug->match($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
+    return -ENOENT unless exists_xpath($xpath);
+    return -EISDIR if isdir_xpath($xpath);
     return $aug->save();
 }
 
