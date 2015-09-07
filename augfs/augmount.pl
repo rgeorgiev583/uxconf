@@ -7,9 +7,9 @@ use v5.012;
 
 use Config::Augeas;
 use Fuse;
-use Parse::Path;
 use POSIX qw(EEXIST ENOENT EISDIR ENOTDIR ENOTEMPTY EINVAL EPERM ENOSPC EIO EFBIG);
 use Fcntl ':mode';
+use Parse::Path;
 
 my $RETAIN_BRACKETS;
 my $MODE;
