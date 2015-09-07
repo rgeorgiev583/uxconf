@@ -122,7 +122,9 @@ sub aug_getattr
     my $xpath = fspath2xpath($path);
     return -ENOENT unless exists_xpath($xpath);
     my $ino  = defined $cache{$xpath} ? $cache{$xpath} : 0;
-    my $mode = isdir_xpath($xpath) ? $MODE | S_IFDIR : $MODE | S_IFREG;
+    my $isdir = isdir_xpath($xpath);
+    my $mode = $isdir ? $MODE | S_IFDIR : $MODE | S_IFREG;
+    my $len = $isdir ? 4096 : length $aug->get($xpath);
 
     #
     # The list returned contains the following fields:
@@ -143,7 +145,7 @@ sub aug_getattr
     # 11 blksize  preferred block size for file system I/O
     # 12 blocks   actual number of blocks allocated
     #
-    return (40, $ino, $mode, 1, $UID, $GID, 0, , $ATIME, $MTIME, $CTIME, );
+    return (40, $ino, $mode, 1, $UID, $GID, 0, $len, $ATIME, $MTIME, $CTIME, 1024, 1);
 }
 
 sub aug_getdir
