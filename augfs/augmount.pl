@@ -15,6 +15,7 @@ my $RETAIN_BRACKETS;
 my $MODE;
 
 my $aug;
+
 my @groups;
 
 my $last_inode;
