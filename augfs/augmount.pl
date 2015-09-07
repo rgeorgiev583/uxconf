@@ -9,13 +9,15 @@ use Config::Augeas;
 use Fuse;
 use Parse::Path;
 use POSIX qw(EEXIST ENOENT EISDIR ENOTDIR ENOTEMPTY EINVAL EPERM ENOSPC EIO EFBIG);
+use Fcntl ':mode';
 
 my $RETAIN_BRACKETS;
+my $MODE;
 
 my $aug;
 my @groups;
 
-my $last_inode = 0;
+my $last_inode;
 my %cache;
 
 sub xpath2fspath
@@ -91,25 +93,30 @@ sub validate_xpath
     }
 }
 
-sub fetch_subtree
+sub rebuild_inode_subtree
 {
     my $xpath = shift;
 
-    $cache{$xpath} =
-    {
-        inode => ++$last_inode,
-        value => $aug->get($xpath),
-    };
+    $cache{$xpath} = ++$last_inode;
 
-    for my $node ($aug->match("$xpath/*"))
-    {
-        fetch_subtree("$xpath/$node");
-    }
+    rebuild_inode_subtree
+        foreach ($aug->match("$xpath/*"));
+}
+
+sub rebuild_inode_cache
+{
+    $last_inode = 0;
+    undef %cache;
+    rebuild_inode_subtree('/');
 }
 
 sub aug_getattr
 {
     my $path = shift;
+    my $xpath = fspath2xpath($path);
+    return -ENOENT unless exists_xpath($xpath);
+    my $mode = isdir_xpath($xpath) ? $MODE | S_IFDIR : $MODE | S_IFREG;
+
     #
     # The list returned contains the following fields:
     #   ($dev, $ino, $mode, $nlink, $uid, $gid, $rdev, $size, $atime, $mtime, $ctime, $blksize, $blocks),
@@ -129,7 +136,8 @@ sub aug_getattr
     # 11 blksize  preferred block size for file system I/O
     # 12 blocks   actual number of blocks allocated
     #
-    return (40, );
+    return (40, defined $cache{$xpath} ? $cache{$xpath} : 0, $mode, );
+}
 
 sub aug_getdir
 {
@@ -153,6 +161,7 @@ sub aug_mkdir
     return -ENOENT unless $xdirname;
     return -EEXIST if scalar $aug->match($xdirname);
     my $success = $aug->srun("set $xdirname");
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return $success ? 0 : 1;
@@ -165,6 +174,7 @@ sub aug_unlink
     return -ENOENT unless $xpath || scalar $aug->match($xpath);
     return -EISDIR if scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
     my $success = $aug->srun("clear $xpath");
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -EIO if $aug->error eq 'internal';
     return $success ? 0 : 1;
@@ -178,6 +188,7 @@ sub aug_rmdir
     return -ENOTEMPTY if scalar $aug->match("$xdirname/*");
     return -ENOTDIR if defined $aug->get($xdirname);
     my $success = $aug->remove($xdirname);
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOENT if $aug->error eq 'nomatch';
     return $success ? 0 : 1;
@@ -194,6 +205,7 @@ sub aug_rename
     my $isnewdir = scalar $aug->match("$xnewpath/*") || not defined $aug->get($xnewpath);
     return -EISDIR if $isnewdir && not $isdir;
     my $success = $aug->move($xpath, $isnewdir ? $xnewpath . '/' . $xpath : $xnewpath);
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return -ENOENT if $aug->error eq 'nomatch';
@@ -213,6 +225,7 @@ sub aug_truncate
     return -EFBIG if $size > $len;
     return 0 if $size == $len;
     my $success = $aug->set($xpath, substr $value, 0, $size);
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -EIO if $aug->error eq 'internal';
     return $success ? 0 : 1;
@@ -245,6 +258,7 @@ sub aug_write
     return 0 if $size == 0;
     substr($value, $offset, $size) = $buffer;
     my $success = $aug->set($xpath, $value);
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return -EIO if $aug->error eq 'internal';
@@ -266,6 +280,7 @@ sub aug_create
     my $xpath = fspath2xpath($path);
     return -EEXIST if scalar $aug->match($xpath);
     my $success = $aug->set($xpath, '');
+    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return $success ? 0 : 1;
@@ -273,6 +288,10 @@ sub aug_create
 
 $aug = Config::Augeas->new(root => shift @ARGV);
 $RETAIN_BRACKETS = 1;
+$MODE = (stat $aug)[2];
+$MODE &= ~S_IXUSR;
+$MODE &= ~S_IXGRP;
+$MODE &= ~S_IXOTH;
 
 Fuse::main
 (
