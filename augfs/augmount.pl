@@ -300,7 +300,7 @@ $aug = Config::Augeas->new(root => $aug_dir);
 
 $RETAIN_BRACKETS = 1;
 
-my $root_stat = stat $aug_dir;
+my @root_stat = stat $aug_dir;
 $MODE = $root_stat[2];
 $MODE &= ~S_IXUSR;
 $MODE &= ~S_IXGRP;
