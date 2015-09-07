@@ -13,6 +13,11 @@ use Parse::Path;
 
 my $RETAIN_BRACKETS;
 my $MODE;
+my $UID;
+my $GID;
+my $ATIME;
+my $MTIME;
+my $CTIME;
 
 my $aug;
 
@@ -138,7 +143,7 @@ sub aug_getattr
     # 11 blksize  preferred block size for file system I/O
     # 12 blocks   actual number of blocks allocated
     #
-    return (40, $ino, $mode, 1, );
+    return (40, $ino, $mode, 1, $UID, $GID, 0, , $ATIME, $MTIME, $CTIME, );
 }
 
 sub aug_getdir
@@ -292,10 +297,17 @@ my $aug_dir = shift @ARGV;
 $aug = Config::Augeas->new(root => $aug_dir);
 
 $RETAIN_BRACKETS = 1;
-$MODE = (stat $aug_dir)[2];
+
+my $root_stat = stat $aug_dir;
+$MODE = $root_stat[2];
 $MODE &= ~S_IXUSR;
 $MODE &= ~S_IXGRP;
 $MODE &= ~S_IXOTH;
+$UID = $root_stat[4];
+$GID = $root_stat[5];
+$ATIME = $root_stat[8];
+$MTIME = $root_stat[9];
+$CTIME = $root_stat[10];
 
 Fuse::main
 (
