@@ -288,9 +288,11 @@ sub aug_create
     return $success ? 0 : 1;
 }
 
-$aug = Config::Augeas->new(root => shift @ARGV);
+my $aug_dir = shift @ARGV;
+$aug = Config::Augeas->new(root => $aug_dir);
+
 $RETAIN_BRACKETS = 1;
-$MODE = (stat $aug)[2];
+$MODE = (stat $aug_dir)[2];
 $MODE &= ~S_IXUSR;
 $MODE &= ~S_IXGRP;
 $MODE &= ~S_IXOTH;
