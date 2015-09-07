@@ -89,7 +89,7 @@ sub validate_xpath
     {
         $hpath->pop;
         return -ENOENT  unless exists_xpath($hpath->as_string);
-        return -ENOTDIR unless isdir_xpath($hpath->as_string);
+        return -ENOTDIR unless  isdir_xpath($hpath->as_string);
     }
 }
 
@@ -296,9 +296,9 @@ $MODE &= ~S_IXOTH;
 Fuse::main
 (
     mountpoint => shift @ARGV,
-    getdir => \&aug_getdir,
-    truncate => \&aug_truncate,
-    read => \&aug_read,
-    write => \&aug_write,
-    create => \&aug_create,
+    getdir     => \&aug_getdir,
+    truncate   => \&aug_truncate,
+    read       => \&aug_read,
+    write      => \&aug_write,
+    create     => \&aug_create,
 );
