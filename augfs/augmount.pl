@@ -138,7 +138,7 @@ sub aug_getattr
     # 11 blksize  preferred block size for file system I/O
     # 12 blocks   actual number of blocks allocated
     #
-    return (40, $ino, $mode, );
+    return (40, $ino, $mode, 1, );
 }
 
 sub aug_getdir
