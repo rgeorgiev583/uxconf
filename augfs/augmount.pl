@@ -296,9 +296,15 @@ $MODE &= ~S_IXOTH;
 Fuse::main
 (
     mountpoint => shift @ARGV,
+    getattr    => \&aug_getattr,
     getdir     => \&aug_getdir,
+    mkdir      => \&aug_mkdir,
+    unlink     => \&aug_unlink,
+    rmdir      => \&aug_rmdir,
+    rename     => \&aug_rename,
     truncate   => \&aug_truncate,
     read       => \&aug_read,
     write      => \&aug_write,
+    flush      => \&aug_flush,
     create     => \&aug_create,
 );
