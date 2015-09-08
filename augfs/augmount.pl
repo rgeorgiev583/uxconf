@@ -312,6 +312,8 @@ $ATIME = $root_stat[8];
 $MTIME = $root_stat[9];
 $CTIME = $root_stat[10];
 
+rebuild_inode_cache();
+
 Fuse::main
 (
     mountpoint => shift @ARGV,
