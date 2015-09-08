@@ -23,8 +23,8 @@ my $aug;
 
 my @groups;
 
-my $last_inode;
-my %cache;
+my $last_ino;
+my %inos;
 
 sub xpath2fspath
 {
@@ -77,7 +77,9 @@ sub exists_xpath
 {
     my $xpath = shift;
     return 1 if $xpath eq '/';
-    return scalar $aug->match($xpath);
+    my $exists = scalar $aug->match($xpath);
+    $inos{$xpath} = ++$last_ino if $exists && not defined $inos{$xpath};
+    return $exists;
 }
 
 sub isdir_xpath
@@ -100,29 +102,12 @@ sub validate_xpath
     }
 }
 
-sub rebuild_inode_subtree
-{
-    my $xpath = shift;
-
-    $cache{$xpath} = ++$last_inode;
-
-    rebuild_inode_subtree($_)
-        foreach ($aug->match("$xpath/*"));
-}
-
-sub rebuild_inode_cache
-{
-    $last_inode = 0;
-    undef %cache;
-    rebuild_inode_subtree('/');
-}
-
 sub aug_getattr
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
     return -ENOENT unless exists_xpath($xpath);
-    my $ino  = defined $cache{$xpath} ? $cache{$xpath} : 0;
+    my $ino  = defined $cache{$inode} ? $cache{$xpath} : 0;
     my $isdir = isdir_xpath($xpath);
     my $mode = $isdir ? $MODE | S_IFDIR : $MODE | S_IFREG;
     my $len = $isdir ? 4096 : length $aug->get($xpath);
@@ -174,6 +159,7 @@ sub aug_mkdir
     rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
+    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
@@ -187,6 +173,7 @@ sub aug_unlink
     rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -EIO if $aug->error eq 'internal';
+    $inos{$xpath} = ++$last_ino if $exists && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
@@ -220,6 +207,7 @@ sub aug_rename
     return -ENOSPC if $aug->error eq 'nomem';
     return -ENOENT if $aug->error eq 'nomatch';
     return -EINVAL if $aug->error_message eq "Cannot move node into its descendant";
+    $inos{$xnewpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
@@ -272,6 +260,7 @@ sub aug_write
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return -EIO if $aug->error eq 'internal';
+    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
@@ -293,6 +282,7 @@ sub aug_create
     rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
+    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
@@ -312,7 +302,8 @@ $ATIME = $root_stat[8];
 $MTIME = $root_stat[9];
 $CTIME = $root_stat[10];
 
-rebuild_inode_cache();
+$last_ino = 1;
+$inos{'/'} = 1;
 
 Fuse::main
 (
