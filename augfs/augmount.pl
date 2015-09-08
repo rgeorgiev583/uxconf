@@ -7,7 +7,7 @@ use v5.012;
 
 use Config::Augeas;
 use Fuse;
-use POSIX qw(EEXIST ENOENT EISDIR ENOTDIR ENOTEMPTY EINVAL EPERM ENOSPC EIO EFBIG);
+use POSIX;
 use Fcntl ':mode';
 use Parse::Path;
 
