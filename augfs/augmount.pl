@@ -76,13 +76,13 @@ sub fspath2xpath
 sub exists_xpath
 {
     my $xpath = shift;
-    return $xpath || scalar $aug->match($xpath);
+    return scalar $aug->match($xpath);
 }
 
 sub isdir_xpath
 {
     my $xpath = shift;
-    return scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
+    return scalar $aug->match("$xpath/*");
 }
 
 sub validate_xpath
