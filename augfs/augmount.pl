@@ -76,6 +76,7 @@ sub fspath2xpath
 sub exists_xpath
 {
     my $xpath = shift;
+    return 1 if $xpath eq '/';
     return scalar $aug->match($xpath);
 }
 
