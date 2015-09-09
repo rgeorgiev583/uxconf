@@ -187,13 +187,12 @@ sub aug_unlink
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless exists_xpath($xpath);
-    return -EISDIR if isdir_xpath($xpath);
+    my $errcode = validate_xpath($xpath);
+    return $errcode if $errcode;
+    return -EISDIR if isdir_xpath($xpath) && $path !~ /(?<=\/)[value]$/;
     my $success = $aug->srun("clear $xpath");
-    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -EIO if $aug->error eq 'internal';
-    $inos{$xpath} = ++$last_ino if $exists && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
