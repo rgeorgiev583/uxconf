@@ -214,19 +214,21 @@ sub aug_rename
 {
     my ($path, $newpath) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless exists_xpath($xpath);
-    my $isdir = isdir_xpath($xpath);
+    my $errcode = validate_xpath($xpath);
+    return $errcode if $errcode;
+    my $isdir = isdir_xpath($xpath) && $path !~ /(?<=\/)[value]$/;
     my $xnewpath = fspath2xpath($newpath);
-    return -ENOENT unless exists_xpath($xnewpath);
-    my $isnewdir = isdir_xpath($xnewpath);
+    $errcode = validate_xpath($xnewpath);
+    return $errcode if $errcode;
+    return -ENOTEMPTY if scalar $aug->match("$xnewpath/*");
+    my $isnewdir = isdir_xpath($xnewpath) && $newpath !~ /(?<=\/)[value]$/;
     return -EISDIR if $isnewdir && not $isdir;
-    my $success = $aug->move($xpath, $isnewdir ? $xnewpath . '/' . $xpath : $xnewpath);
-    rebuild_inode_cache();
+    my $success = $aug->move($xpath, $isnewdir ? "$xnewpath/$xpath" : $xnewpath);
+    $inos{$xnewpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return -ENOENT if $aug->error eq 'nomatch';
     return -EINVAL if $aug->error_message eq "Cannot move node into its descendant";
-    $inos{$xnewpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
