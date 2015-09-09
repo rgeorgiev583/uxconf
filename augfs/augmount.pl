@@ -236,15 +236,15 @@ sub aug_truncate
 {
     my ($path, $size) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless exists_xpath($xpath);
+    my $errcode = validate_xpath($xpath);
+    return $errcode if $errcode;
+    return -EISDIR if isdir_xpath($xpath) && $path !~ /(?<=\/)[value]$/;
     my $value = $aug->get($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
     return -EINVAL if $size < 0;
     return -EFBIG if $size > $len;
     return 0 if $size == $len;
     my $success = $aug->set($xpath, substr $value, 0, $size);
-    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -EIO if $aug->error eq 'internal';
     return $success ? 0 : 1;
