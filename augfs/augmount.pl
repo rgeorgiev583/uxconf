@@ -200,11 +200,11 @@ sub aug_rmdir
 {
     my $dirname = shift;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless exists_xpath($xdirname);
+    my $errcode = validate_xpath($xdirname);
+    return $errcode if $errcode;
     return -ENOTEMPTY if scalar $aug->match("$xdirname/*");
-    return -ENOTDIR if defined $aug->get($xdirname);
+    return -ENOTDIR if not isdir_xpath($xdirname) || $dirname =~ /(?<=\/)[value]$/;
     my $success = $aug->remove($xdirname);
-    rebuild_inode_cache();
     return -EPERM if $aug->error eq 'pathx';
     return -ENOENT if $aug->error eq 'nomatch';
     return $success ? 0 : 1;
