@@ -254,12 +254,13 @@ sub aug_read
 {
     my ($path, $size, $offset) = @_;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless exists_xpath($xpath);
+    my $errcode = validate_xpath($xpath);
+    return $errcode if $errcode;
+    return -EISDIR if isdir_xpath($xpath) && $path !~ /(?<=\/)[value]$/;
     my $value = $aug->get($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
     return -EINVAL if $offset < 0 || $size < 0 || $offset > $len;
-    return 0 if $offset == $len || $size == 0;
+    return 0 if $size == 0 || $offset == $len;
     return substr $value, $offset, $size;
 }
 
