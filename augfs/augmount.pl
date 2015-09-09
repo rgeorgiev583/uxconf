@@ -77,6 +77,7 @@ sub exists_xpath
 {
     my $xpath = shift;
     return 1 if $xpath eq '/';
+    return 0 if $xpath eq '';
     my $exists = scalar $aug->match($xpath);
     $inos{$xpath} = ++$last_ino if $exists && not defined $inos{$xpath};
     return $exists;
