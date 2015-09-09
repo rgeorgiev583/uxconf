@@ -126,9 +126,10 @@ sub aug_getattr
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless exists_xpath($xpath);
-    my $ino  = defined $cache{$inode} ? $cache{$xpath} : 0;
-    my $isdir = isdir_xpath($xpath);
+    my $errcode = validate_xpath($xpath);
+    return $errcode if $errcode;
+    my $ino  = defined $inos{$xpath} ? $inos{$xpath} : 0;
+    my $isdir = isdir_xpath($xpath) && $path !~ /(?<=\/)[value]$/;
     my $mode = $isdir ? $MODE | S_IFDIR : $MODE | S_IFREG;
     my $len = $isdir ? 4096 : length $aug->get($xpath);
 
