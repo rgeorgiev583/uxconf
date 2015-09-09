@@ -12,6 +12,8 @@ use Fcntl ':mode';
 use Parse::Path;
 
 my $RETAIN_BRACKETS;
+my $VALIDATE_PATH_PREFIX;
+
 my $MODE;
 my $UID;
 my $GID;
@@ -89,18 +91,35 @@ sub isdir_xpath
     return scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
 }
 
-sub validate_xpath
+sub validate_xpath_prefix
 {
     my $xpath = shift;
-    return -ENOENT unless exists_xpath($xpath);
+    return -ENOENT if $xpath eq '';
     my $hpath = Parse::Path->new(path => $xpath, style => 'File::Unix', auto_cleanup => 1);
+    $hpath->pop;
 
     while ($hpath->depth)
     {
-        $hpath->pop;
         return -ENOENT  unless exists_xpath($hpath->as_string);
         return -ENOTDIR unless  isdir_xpath($hpath->as_string);
+        $hpath->pop;
     }
+
+    return 0;
+}
+
+sub validate_xpath
+{
+    my $xpath = shift;
+
+    if ($VALIDATE_PATH_PREFIX)
+    {
+        my $errcode = validate_xpath_prefix($xpath);
+        return $errcode if $errcode;
+    }
+
+    return -ENOENT unless exists_xpath($xpath);
+    return 0;
 }
 
 sub aug_getattr
