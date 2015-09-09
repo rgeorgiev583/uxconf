@@ -158,14 +158,12 @@ sub aug_getattr
 sub aug_getdir
 {
     my $dirname = shift;
-    return -ENOTDIR if $dirname =~ /(?<=\/)[value]$/;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless exists_xpath($xdirname);
-    my $value = $aug->get($xdirname);
-    my @list = $aug->match("$xdirname/*");
-    return -ENOTDIR unless scalar @list || not defined $value;
-    @list = map xpath2fspath @list;
-    unshift @list, '[value]' if defined $value;
+    my $errcode = validate_xpath($xdirname);
+    return $errcode if $errcode;
+    return -ENOTDIR if not isdir_xpath($xdirname) || $dirname =~ /(?<=\/)[value]$/;
+    my @list = map xpath2fspath $aug->match("$xdirname/*");
+    unshift @list, '[value]' if defined $aug->get($xdirname);
     return (@list, 0);
 }
 
