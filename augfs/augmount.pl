@@ -292,7 +292,8 @@ sub aug_flush
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -ENOENT unless exists_xpath($xpath);
+    my $errcode = validate_xpath($xpath);
+    return $errcode if $errcode;
     return -EISDIR if isdir_xpath($xpath);
     return $aug->save();
 }
