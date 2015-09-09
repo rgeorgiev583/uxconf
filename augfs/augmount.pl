@@ -268,8 +268,11 @@ sub aug_write
 {
     my ($path, $buffer, $offset) = @_;
     my $xpath = fspath2xpath($path);
+    my $errcode;
+    $errcode = validate_xpath_prefix($xpath) if $VALIDATE_PATH_PREFIX;
+    return $errcode if $errcode;
+    return -EISDIR if isdir_xpath($xpath) && $path !~ /(?<=\/)[value]$/;
     my $value = $aug->get($xpath);
-    return -EISDIR if scalar $aug->match("$xpath/*") || not defined $value;
     my $len = length $value;
     return -EINVAL if $offset < 0;
     return -EFBIG if $offset > $len;
@@ -278,11 +281,10 @@ sub aug_write
     return 0 if $size == 0;
     substr($value, $offset, $size) = $buffer;
     my $success = $aug->set($xpath, $value);
-    rebuild_inode_cache();
+    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
     return -EIO if $aug->error eq 'internal';
-    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
