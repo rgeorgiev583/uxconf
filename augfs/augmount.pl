@@ -54,7 +54,7 @@ sub fspath2xpath
     my $path = shift;
     $path =~ s/(?<=\/)[value]$//;
     $path =~ s/\/\[(\d+)\](?:\/|$)/\[$1\]/g;
-    return 0 if $path =~ /[\[\]*]/;
+    return '' if $path =~ /[\[\]*]/;
 
     unless ($RETAIN_BRACKETS)
     {
