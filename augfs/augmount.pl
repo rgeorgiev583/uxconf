@@ -86,7 +86,7 @@ sub exists_xpath
 sub isdir_xpath
 {
     my $xpath = shift;
-    return scalar $aug->match("$xpath/*");
+    return scalar $aug->match("$xpath/*") || not defined $aug->get($xpath);
 }
 
 sub validate_xpath
