@@ -302,12 +302,14 @@ sub aug_create
 {
     my $path = shift;
     my $xpath = fspath2xpath($path);
-    return -EEXIST if scalar $aug->match($xpath);
-    my $success = $aug->set($xpath, '');
-    rebuild_inode_cache();
+    my $errcode;
+    $errcode = validate_xpath_prefix($xpath) if $VALIDATE_PATH_PREFIX;
+    return $errcode if $errcode;
+    return -EEXIST if exists_xpath($xpath);
+    my $success = $aug->srun("touch $xpath");
+    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
-    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
