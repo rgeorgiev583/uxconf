@@ -170,15 +170,16 @@ sub aug_getdir
 sub aug_mkdir
 {
     my $dirname = shift;
-    return -EPERM if $dirname =~ /(?<=\/)[value]$/;
     my $xdirname = fspath2xpath($dirname);
-    return -ENOENT unless $xdirname;
-    return -EEXIST if scalar $aug->match($xdirname);
-    my $success = $aug->srun("set $xdirname");
-    rebuild_inode_cache();
+    my $errcode;
+    $errcode = validate_xpath_prefix($xdirname) if $VALIDATE_PATH_PREFIX;
+    return $errcode if $errcode;
+    return defined $aug->get($xdirname) ? -EEXIST : -EPERM if $dirname =~ /(?<=\/)[value]$/;
+    return -EEXIST if exists_xpath($xdirname);
+    my $success = $aug->srun("touch $xdirname");
+    $inos{$xdirname} = ++$last_ino if $success && not defined $inos{$xdirname};
     return -EPERM if $aug->error eq 'pathx';
     return -ENOSPC if $aug->error eq 'nomem';
-    $inos{$xpath} = ++$last_ino if $success && not defined $inos{$xpath};
     return $success ? 0 : 1;
 }
 
