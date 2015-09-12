@@ -313,38 +313,40 @@ sub aug_create
     return $success ? 0 : 1;
 }
 
-my $aug_dir = shift @ARGV;
-$aug = Config::Augeas->new(root => $aug_dir);
+MAIN:
+{
+    my $aug_dir = shift @ARGV;
+    $aug = Config::Augeas->new(root => $aug_dir);
+    $RETAIN_BRACKETS = 1;
+    $VALIDATE_PATH_PREFIX = 1;
 
-$RETAIN_BRACKETS = 1;
-$VALIDATE_PATH_PREFIX = 1;
+    my @root_stat = stat $aug_dir;
+    $MODE = $root_stat[2];
+    $MODE &= ~S_IXUSR;
+    $MODE &= ~S_IXGRP;
+    $MODE &= ~S_IXOTH;
+    $UID = $root_stat[4];
+    $GID = $root_stat[5];
+    $ATIME = $root_stat[8];
+    $MTIME = $root_stat[9];
+    $CTIME = $root_stat[10];
 
-my @root_stat = stat $aug_dir;
-$MODE = $root_stat[2];
-$MODE &= ~S_IXUSR;
-$MODE &= ~S_IXGRP;
-$MODE &= ~S_IXOTH;
-$UID = $root_stat[4];
-$GID = $root_stat[5];
-$ATIME = $root_stat[8];
-$MTIME = $root_stat[9];
-$CTIME = $root_stat[10];
+    $last_ino = 1;
+    $inos{'/'} = 1;
 
-$last_ino = 1;
-$inos{'/'} = 1;
-
-Fuse::main
-(
-    mountpoint => shift @ARGV,
-    getattr    => \&aug_getattr,
-    getdir     => \&aug_getdir,
-    mkdir      => \&aug_mkdir,
-    unlink     => \&aug_unlink,
-    rmdir      => \&aug_rmdir,
-    rename     => \&aug_rename,
-    truncate   => \&aug_truncate,
-    read       => \&aug_read,
-    write      => \&aug_write,
-    flush      => \&aug_flush,
-    create     => \&aug_create,
-);
+    Fuse::main
+    (
+        mountpoint => shift @ARGV,
+        getattr    => \&aug_getattr,
+        getdir     => \&aug_getdir,
+        mkdir      => \&aug_mkdir,
+        unlink     => \&aug_unlink,
+        rmdir      => \&aug_rmdir,
+        rename     => \&aug_rename,
+        truncate   => \&aug_truncate,
+        read       => \&aug_read,
+        write      => \&aug_write,
+        flush      => \&aug_flush,
+        create     => \&aug_create,
+    );
+}
