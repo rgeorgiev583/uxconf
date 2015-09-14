@@ -163,7 +163,7 @@ sub aug_getdir
     my $errcode = validate_xpath($xdirname);
     return $errcode if $errcode;
     return -ENOTDIR if not isdir_xpath($xdirname) || $dirname =~ /(?<=\/)[value]$/;
-    my @list = map xpath2fspath $aug->match($xdirname eq '/' ? "/*" : "$xdirname/*");
+    my @list = map { xpath2fspath $_ } $aug->match($xdirname eq '/' ? "/*" : "$xdirname/*");
     unshift @list, '[value]' if defined $aug->get($xdirname);
     return (@list, 0);
 }
