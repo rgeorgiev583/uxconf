@@ -10,6 +10,7 @@ use Fuse;
 use POSIX;
 use Fcntl ':mode';
 use Parse::Path;
+use Std::Getopt;
 
 my $RETAIN_BRACKETS;
 my $VALIDATE_PATH_PREFIX;
@@ -316,10 +317,13 @@ sub aug_create
 
 MAIN:
 {
+    my %opts;
+    getopts('bv', \%opts);
+
     my $aug_dir = shift @ARGV;
     $aug = Config::Augeas->new(root => $aug_dir);
-    $RETAIN_BRACKETS = 1;
-    $VALIDATE_PATH_PREFIX = 1;
+    $RETAIN_BRACKETS = $opts{'b'};
+    $VALIDATE_PATH_PREFIX = $opts{'v'};
 
     my @root_stat = stat $aug_dir;
     $MODE = $root_stat[2];
