@@ -80,7 +80,7 @@ sub exists_xpath
     my $xpath = shift;
     return 1 if $xpath eq '/';
     return 0 if $xpath eq '';
-    my $exists = $aug->count_match($xpath);
+    my $exists = $aug->count_match($xpath) > 0;
     $inos{$xpath} = ++$last_ino if $exists && not defined $inos{$xpath};
     return $exists;
 }
@@ -88,7 +88,8 @@ sub exists_xpath
 sub isdir_xpath
 {
     my $xpath = shift;
-    return scalar $aug->srun("ls $xpath") || not defined $aug->get($xpath);
+    return 1 if $xpath eq '/';
+    return $aug->count_match("$xpath/*") > 0 || not defined $aug->get($xpath);
 }
 
 sub validate_xpath_prefix
@@ -162,7 +163,7 @@ sub aug_getdir
     my $errcode = validate_xpath($xdirname);
     return $errcode if $errcode;
     return -ENOTDIR if not isdir_xpath($xdirname) || $dirname =~ /(?<=\/)[value]$/;
-    my @list = map xpath2fspath $aug->srun("ls $xdirname");
+    my @list = map xpath2fspath $aug->match($xdirname eq '/' ? "/*" : "$xdirname/*");
     unshift @list, '[value]' if defined $aug->get($xdirname);
     return (@list, 0);
 }
@@ -202,7 +203,7 @@ sub aug_rmdir
     my $xdirname = fspath2xpath($dirname);
     my $errcode = validate_xpath($xdirname);
     return $errcode if $errcode;
-    return -ENOTEMPTY if scalar $aug->srun("ls $xdirname");
+    return -ENOTEMPTY if $xdirname eq '/' || $aug->count_match("$xdirname/*") > 0;
     return -ENOTDIR if not isdir_xpath($xdirname) || $dirname =~ /(?<=\/)[value]$/;
     my $success = $aug->remove($xdirname);
     return -EPERM if $aug->error eq 'pathx';
@@ -220,7 +221,7 @@ sub aug_rename
     my $xnewpath = fspath2xpath($newpath);
     $errcode = validate_xpath($xnewpath);
     return $errcode if $errcode;
-    return -ENOTEMPTY if scalar $aug->srun("ls $xnewpath");
+    return -ENOTEMPTY if $xnewpath eq '/' || $aug->count_match("$xnewpath/*") > 0;
     my $isnewdir = isdir_xpath($xnewpath) && $newpath !~ /(?<=\/)[value]$/;
     return -EISDIR if $isnewdir && not $isdir;
     my $success = $aug->move($xpath, $isnewdir ? "$xnewpath/$xpath" : $xnewpath);
