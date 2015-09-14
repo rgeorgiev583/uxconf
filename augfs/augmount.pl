@@ -11,6 +11,7 @@ use POSIX;
 use Fcntl ':mode';
 use Parse::Path;
 use Std::Getopt;
+use Proc::Daemon;
 
 my $RETAIN_BRACKETS;
 my $VALIDATE_PATH_PREFIX;
@@ -314,6 +315,8 @@ sub aug_create
     return -ENOSPC if $aug->error eq 'nomem';
     return $success ? 0 : 1;
 }
+
+Proc::Daemon::Init { pid_file => '/var/run/augmount.pid' };
 
 MAIN:
 {
