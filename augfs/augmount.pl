@@ -10,7 +10,7 @@ use Fuse;
 use POSIX;
 use Fcntl ':mode';
 use Parse::Path;
-use Std::Getopt;
+use Getopt::Std;
 use Proc::Daemon;
 
 my $RETAIN_BRACKETS;
